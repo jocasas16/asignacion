@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Asignación Operarios</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a; --border: #2e3248;
+    --accent: #3b82f6; --accent2: #6366f1; --text: #e8eaf0; --text-dim: #7c8099;
+    --green: #22c55e; --yellow: #f59e0b; --orange: #f97316; --red: #ef4444;
+    --e-color: #a78bfa; --i-color: #38bdf8; --row-h: 72px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Barlow', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+  header { background: linear-gradient(135deg,#1a1d27,#12151f); border-bottom: 2px solid var(--border); padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .logo { font-family: 'Barlow Condensed',sans-serif; font-size: 22px; font-weight: 800; letter-spacing: 1px; }
+  .logo span { color: var(--accent); }
+  .header-date { font-size: 13px; color: var(--text-dim); text-align: right; }
+
+  #summary-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; gap: 10px; flex-wrap: wrap; min-height: 44px; }
+  .op-chip { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px 5px 8px; font-size: 13px; white-space: nowrap; }
+  .op-chip-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .op-chip-name { font-weight: 600; }
+  .op-chip-pct { font-size: 12px; }
+
+  .action-bar { display: flex; gap: 10px; padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--border); align-items: center; }
+  .btn-action { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Barlow',sans-serif; font-size: 13px; font-weight: 600; padding: 7px 14px; cursor: pointer; transition: background 0.2s; }
+  .btn-action:hover { background: var(--border); border-color: var(--accent); }
+  .autosave-label { font-size: 12px; color: var(--text-dim); margin-left: 4px; }
+
+  .table-wrap { padding: 14px; overflow-x: auto; }
+  table { width: 100%; border-collapse: separate; border-spacing: 0 6px; min-width: 720px; }
+  thead th { font-family: 'Barlow Condensed',sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-dim); padding: 0 10px 4px; text-align: left; }
+
+  .row-machine { background: var(--surface); transition: background 0.15s, opacity 0.25s; }
+  .row-machine td { padding: 0; height: var(--row-h); vertical-align: middle; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .row-machine td:first-child { border-left: 1px solid var(--border); border-radius: 10px 0 0 10px; }
+  .row-machine td:last-child { border-right: 1px solid var(--border); border-radius: 0 10px 10px 0; padding-right: 14px; }
+  .row-machine.type-e td { border-color: rgba(167,139,250,.25); }
+  .row-machine.type-i td { border-color: rgba(56,189,248,.18); }
+  .row-machine.type-e { background: rgba(167,139,250,.06); }
+
+  /* STOPPED */
+  .row-machine.stopped { background: #1a1212 !important; opacity: .72; }
+  .row-machine.stopped td { border-color: #4a2020 !important; }
+  .row-machine.stopped .molde-select,
+  .row-machine.stopped .op-select { opacity: .4; pointer-events: none; }
+  .stopped-label { display:none; font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; color:var(--red); letter-spacing:1px; margin-top:2px; text-align:center; }
+  .stopped .stopped-label { display:block; }
+  .stopped .badge-e, .stopped .badge-i { background:rgba(80,80,80,.1)!important; color:#444!important; border-color:#333!important; }
+
+  /* STOP BTN */
+  .col-stop { width: 46px; padding: 0 4px 0 10px; }
+  .stop-btn { width:32px; height:32px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface2); color:var(--text-dim); cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+  .stop-btn:hover { border-color:var(--red); color:var(--red); background:rgba(239,68,68,.1); }
+  .stop-btn.active { border-color:var(--red); background:rgba(239,68,68,.2); color:var(--red); }
+
+  /* BADGE */
+  .col-id { width:64px; padding:0 8px; }
+  .machine-badge { font-family:'Barlow Condensed',sans-serif; font-size:17px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; width:46px; height:46px; border-radius:10px; }
+  .badge-e { background:rgba(167,139,250,.15); color:var(--e-color); border:1.5px solid rgba(167,139,250,.4); }
+  .badge-i { background:rgba(56,189,248,.12); color:var(--i-color); border:1.5px solid rgba(56,189,248,.3); }
+
+  /* SELECTS */
+  .col-molde { width:178px; padding:0 8px; }
+  .col-op    { width:165px; padding:0 8px; }
+  .col-desc  { padding:0 8px; }
+  .col-ocu   { width:118px; padding:0 8px; text-align:center; }
+
+  .molde-select, .op-select {
+    appearance:none; background:var(--surface2); border:1.5px solid var(--border); border-radius:8px; color:var(--text);
+    padding:8px 28px 8px 10px; width:100%; cursor:pointer; transition:border-color .2s;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%237c8099' d='M5 6L0 0h10z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 9px center;
+  }
+  .molde-select { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight:600; }
+  .op-select    { font-family:'Barlow',sans-serif; font-size:14px; font-weight:500; }
+  .molde-select:focus, .op-select:focus { outline:none; border-color:var(--accent); }
+  .molde-select option, .op-select option { background:#1a1d27; }
+  .molde-select.conflict { border-color:var(--red)!important; background-color:rgba(239,68,68,.08); }
+
+  .desc-text { font-size:13px; color:var(--text-dim); line-height:1.3; }
+  .desc-coef { font-family:'Barlow Condensed',sans-serif; font-size:12px; color:var(--accent); margin-top:2px; }
+
+  .ocu-display { display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .ocu-pct { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:700; }
+  .ocu-bar-wrap { width:84px; height:6px; background:rgba(255,255,255,.08); border-radius:3px; overflow:hidden; }
+  .ocu-bar { height:100%; border-radius:3px; transition:width .4s ease; }
+
+  .color-ok   { color:var(--green); } .color-warn { color:var(--yellow); }
+  .color-over { color:var(--orange);} .color-crit { color:var(--red); }
+
+  /* CONFLICT TOAST */
+  #conflict-msg { position:fixed; top:70px; left:50%; transform:translateX(-50%) translateY(-10px); background:var(--red); color:#fff; font-weight:700; font-size:14px; padding:10px 22px; border-radius:10px; opacity:0; transition:all .3s; pointer-events:none; z-index:400; max-width:90%; text-align:center; box-shadow:0 4px 20px rgba(239,68,68,.5); }
+  #conflict-msg.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* PANEL */
+  #op-panel { position:fixed; right:0; top:0; bottom:0; width:320px; background:var(--surface); border-left:2px solid var(--border); padding:20px; overflow-y:auto; transform:translateX(100%); transition:transform .3s cubic-bezier(.4,0,.2,1); z-index:200; }
+  #op-panel.open { transform:translateX(0); }
+  .panel-title { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:800; letter-spacing:1px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; }
+  .close-btn { background:none; border:none; color:var(--text-dim); font-size:22px; cursor:pointer; }
+  .op-card { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
+  .op-card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .op-card-name { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:700; }
+  .op-card-total { font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:800; }
+  .op-progress-wrap { width:100%; height:8px; background:rgba(255,255,255,.08); border-radius:4px; overflow:hidden; margin-bottom:8px; }
+  .op-progress { height:100%; border-radius:4px; transition:width .5s ease; }
+  .op-machines { font-size:12px; color:var(--text-dim); }
+  .op-machine-item { display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px solid rgba(255,255,255,.04); }
+
+  #panel-btn { position:fixed; right:20px; bottom:30px; background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; border:none; border-radius:14px; padding:14px 20px; font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:700; letter-spacing:.5px; cursor:pointer; box-shadow:0 4px 20px rgba(59,130,246,.4); z-index:150; display:flex; align-items:center; gap:8px; transition:transform .2s; }
+  #panel-btn:active { transform:scale(.96); }
+
+  #overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:190; backdrop-filter:blur(2px); }
+  #overlay.show { display:block; }
+
+  ::-webkit-scrollbar { width:6px; height:6px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+  @media(max-width:600px) { #op-panel { width:100%; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">MÁQUINAS <span>INYECCIÓN</span></div>
+  <div class="header-date" id="header-date"></div>
+</header>
+<div id="summary-bar"></div>
+<div class="action-bar">
+  <button class="btn-action" onclick="resetAll()">🔄 Limpiar todo</button>
+  <span class="autosave-label" id="autosave-label">✓ Guardado automático</span>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th class="col-stop" title="Parada">⏸</th>
+        <th class="col-id">Máq.</th>
+        <th class="col-molde">Nº Molde</th>
+        <th class="col-desc">Descripción / Coef.</th>
+        <th class="col-op">Operario</th>
+        <th class="col-ocu">Ocupación Op.</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<div id="overlay" onclick="closePanel()"></div>
+<div id="op-panel">
+  <div class="panel-title">Resumen Operarios <button class="close-btn" onclick="closePanel()">✕</button></div>
+  <div id="panel-content"></div>
+</div>
+<button id="panel-btn" onclick="togglePanel()"><span>👥</span> Ver Operarios</button>
+<div id="conflict-msg"></div>
+
+<script>
+const MOLDE_BY_CAT = {"E01":{"E01":{"molde":"E01","coef":33.0,"desc":"Caja estanca IP55"}},"E02":{"E02":{"molde":"E02","coef":33.0,"desc":"Caja mecanismos emp.1 mec."}},"E03":{"E03":{"molde":"E03","coef":33.0,"desc":"Caja estanca 4 conos IP55"}},"I":{"444":{"molde":"444","coef":10.0,"desc":"Base 3102 ABS Negro"},"383 BIS":{"molde":"383 BIS","coef":33.0,"desc":"ADAPTADOR 63A ACQUA COMBI (383)"},"24":{"molde":"24","coef":33.0,"desc":"Base 3301 Gris Nuova 4 elem. (24)"},"25":{"molde":"25","coef":33.0,"desc":"Base 3302 Gris Nuova 12-14 elem. (25)"},"195":{"molde":"195","coef":33.0,"desc":"Base 3304GrisNUO 10e.(195)"},"246":{"molde":"246","coef":33.0,"desc":"Base 3340 PS (246)"},"253":{"molde":"253","coef":33.0,"desc":"Base 3363 PS 4 elem.(253)"},"447":{"molde":"447","coef":33.0,"desc":"Base 3902 ABS Famatel"},"269":{"molde":"269","coef":33.0,"desc":"Base 3904 ABS Famatel(269)"},"612":{"molde":"612","coef":33.0,"desc":"Base Caja Estanca 3056"},"448":{"molde":"448","coef":33.0,"desc":"Carcasa ABS 3902 FME"},"270":{"molde":"270","coef":33.0,"desc":"Carcasa ABS 3904 FME (270)"},"605":{"molde":"605","coef":33.0,"desc":"Concha Roller"},"636":{"molde":"636","coef":33.0,"desc":"Concha Roller USB Lima"},"670":{"molde":"670","coef":25.0,"desc":"Cono 20mm"},"294":{"molde":"294","coef":25.0,"desc":"Cubrebornes regleta NUOVA VITA (CORTA)"},"381":{"molde":"381","coef":25.0,"desc":"Distancial Port.3957/3958"},"386":{"molde":"386","coef":25.0,"desc":"Distancial Portaguias PCE Serie Industrial"},"743":{"molde":"743","coef":33.0,"desc":"Distrib.luz inf. recarga EV"},"262":{"molde":"262","coef":33.0,"desc":"Grapa plast. Paredes (262)"},"326":{"molde":"326","coef":25.0,"desc":"Maneta cierre 26/42 gris Serie Acqua"},"272":{"molde":"272","coef":25.0,"desc":"Maneta cierre Gris Acqua (pequeño)"},"388":{"molde":"388","coef":25.0,"desc":"Placa 13950 PCE Acqua Combi"},"311":{"molde":"311","coef":25.0,"desc":"Placa ciega Acqua Combi (311)"},"735":{"molde":"735","coef":25.0,"desc":"Placa ciega caja suspension"},"384/A":{"molde":"384/A","coef":25.0,"desc":"Placa Interblocante PCE"},"421":{"molde":"421","coef":25.0,"desc":"Placa tomas BALS Acqua Combi (421)"},"432":{"molde":"432","coef":25.0,"desc":"Placa Tomas PROTEUS (432)"},"308":{"molde":"308","coef":25.0,"desc":"Placa troquelada Acqua Combi (308)"},"387":{"molde":"387","coef":25.0,"desc":"Placa troquelada PCE Acqua Combi"},"384/B":{"molde":"384/B","coef":25.0,"desc":"Placa Universal Doble(384)"},"309":{"molde":"309","coef":25.0,"desc":"Rosca Union Serie Industrial"},"267":{"molde":"267","coef":25.0,"desc":"Separador 3340 PS (267) IP-40 Serie Vita"},"268":{"molde":"268","coef":25.0,"desc":"Separador 3363 PS (268) IP-40 Serie Vita"},"74":{"molde":"74","coef":33.0,"desc":"Tapa 3300 ACQUA Gris(74)"},"215":{"molde":"215","coef":25.0,"desc":"Tapeta ciega pretroquelada NUOVA"},"354":{"molde":"354","coef":25.0,"desc":"Tapon cerradura Gris Acqua"},"212":{"molde":"212","coef":25.0,"desc":"Tapon protector Serie(212) Acqua Color Gris"},"430":{"molde":"430","coef":25.0,"desc":"Tuerca mariposa 3957/3958"},"19":{"molde":"19","coef":33.0,"desc":"Unión Armar. Emp. Nuova"},"260":{"molde":"260","coef":25.0,"desc":"Unión Armar. IP-40 Vita"},"28":{"molde":"28","coef":33.0,"desc":"Base 3401 BN NUO (28)"},"29":{"molde":"29","coef":33.0,"desc":"Base 3403 BN NUOVA (29)"},"30":{"molde":"30","coef":33.0,"desc":"Base 3404 PS B.Nieve(30)"},"27":{"molde":"27","coef":33.0,"desc":"Base 3411 BN NUOVA (27)"},"544":{"molde":"544","coef":33.0,"desc":"Base Sup. 4e NUOVA (544)"},"545":{"molde":"545","coef":33.0,"desc":"Base Sup. 8e NUOVA (545)"},"546":{"molde":"546","coef":33.0,"desc":"Base Sup.12e NUOVA (546)"},"2":{"molde":"2","coef":100.0,"desc":"Base/Caja 3452 PS (2)"},"196":{"molde":"196","coef":33.0,"desc":"Base/Caja 3454 PS (196)"},"64":{"molde":"64","coef":33.0,"desc":"Carcasa NUOVA 12 elem.(64)"},"60":{"molde":"60","coef":33.0,"desc":"Carcasa NUOVA 4 elem.(60)"},"62":{"molde":"62","coef":33.0,"desc":"Carcasa NUOVA 8 elem.(62)"},"290":{"molde":"290","coef":25.0,"desc":"Distancial nuevo NUOV(290)"},"s/n":{"molde":"s/n","coef":33.0,"desc":"Mango Givi"},"299/D":{"molde":"299/D","coef":33.0,"desc":"Marco embell.3518 (299)"},"299/A":{"molde":"299/A","coef":33.0,"desc":"Marco embellec.3504 (299)"},"299/B":{"molde":"299/B","coef":33.0,"desc":"Marco embellec.3508 (299)"},"299/C":{"molde":"299/C","coef":33.0,"desc":"Marco embellec.3512 (299)"},"427":{"molde":"427","coef":25.0,"desc":"Pasamuros vita blanco nieve superficie"},"217":{"molde":"217","coef":25.0,"desc":"Portaguias 24 elem.(217)"},"71":{"molde":"71","coef":25.0,"desc":"Separador BN NUOVA (71)"},"20":{"molde":"20","coef":33.0,"desc":"Tapa 3301 BN (20)"},"21":{"molde":"21","coef":33.0,"desc":"Tapa 3302 PS (21)"},"22":{"molde":"22","coef":33.0,"desc":"Tapa 3303 PS(22)"},"23":{"molde":"23","coef":33.0,"desc":"Tapa 3304 PS (23)"},"244":{"molde":"244","coef":33.0,"desc":"Tapa 3308 PS 8 elem.(244)"},"245":{"molde":"245","coef":33.0,"desc":"Tapa 3312 BN 12 elem.(245)"},"255":{"molde":"255","coef":33.0,"desc":"Tapa 3318 PS 18 elem.(255)"},"367":{"molde":"367","coef":33.0,"desc":"Tapa 3340 Legrand (367)"},"368":{"molde":"368","coef":33.0,"desc":"Tapa 3363 Legrand (368)"},"65":{"molde":"65","coef":33.0,"desc":"Tapa Opaca NUO 12 elem(65)"},"67":{"molde":"67","coef":33.0,"desc":"Tapa Opaca NUO 18 elem(67)"},"61":{"molde":"61","coef":33.0,"desc":"Tapa Opaca NUO 4 elem.(61)"},"63":{"molde":"63","coef":33.0,"desc":"Tapa Opaca NUO 8 elem.(63)"},"594":{"molde":"594","coef":10.0,"desc":"Tapa Caja MiniEstanca 3050 (90x43)"},"597":{"molde":"597","coef":10.0,"desc":"Tapa Caja MiniEstanca 3051 (74x74)"},"599":{"molde":"599","coef":10.0,"desc":"Tapa Caja MiniEstanca 3052"},"596":{"molde":"596","coef":10.0,"desc":"Base Caja Mini Estanca 3050 (90x43)"},"598":{"molde":"598","coef":10.0,"desc":"Base Caja Mini Estanca 3051 (74x74)"},"600":{"molde":"600","coef":10.0,"desc":"Base Caja Mini Estanca 3052"},"274":{"molde":"274","coef":33.0,"desc":"Carcasa ABS 3912 FME (274)"},"577":{"molde":"577","coef":25.0,"desc":"Embellecedor tapa icp(577)"},"426":{"molde":"426","coef":33.0,"desc":"Base 3420 ABS (426)"},"425":{"molde":"425","coef":33.0,"desc":"Base 3444 ABS (425)"},"335":{"molde":"335","coef":50.0,"desc":"Base 3926 ABS Famatel(335)"},"738":{"molde":"738","coef":33.0,"desc":"Base recarga EV"},"431":{"molde":"431","coef":33.0,"desc":"Carcasa 3360"},"779":{"molde":"779","coef":33.0,"desc":"Carcasa Distribucion"},"739":{"molde":"739","coef":33.0,"desc":"Carcasa recarga EV"},"663":{"molde":"663","coef":33.0,"desc":"Placa Lateral Befresh"},"371":{"molde":"371","coef":33.0,"desc":"Puer.3312 ABS Legrand(371)"},"373":{"molde":"373","coef":33.0,"desc":"Puer.3324/38ABS Master 373"},"780":{"molde":"780","coef":33.0,"desc":"Puerta Distribucion"},"167":{"molde":"167","coef":33.0,"desc":"Tapa 3015"},"346":{"molde":"346","coef":33.0,"desc":"Tapa 3223 Antichoque (346)"},"477":{"molde":"477","coef":33.0,"desc":"Tapa intermedia Punto Servicio (477)"},"222":{"molde":"222","coef":33.0,"desc":"Base 3636 Sup.NUO 36e(222)"},"210":{"molde":"210","coef":33.0,"desc":"Carcasa NUOVA 24 elem(210)"},"219":{"molde":"219","coef":33.0,"desc":"Carcasa NUOVA 36 el.(219)"},"438":{"molde":"438","coef":33.0,"desc":"Puer.3308/14ABS CHAMP VIT06"},"370":{"molde":"370","coef":33.0,"desc":"Tapa 3344 Blanco Nieve(370)"},"372":{"molde":"372","coef":33.0,"desc":"Puerta 3320 ABS Legr.(372)"},"365":{"molde":"365","coef":33.0,"desc":"Base 3360 4+44 VITA06(365)"},"337":{"molde":"337","coef":33.0,"desc":"Base 3942 ABS Famatel(337)"},"606":{"molde":"606","coef":33.0,"desc":"Base 3959"},"313":{"molde":"313","coef":33.0,"desc":"Base Acq.Com.230x506 (313)"},"321":{"molde":"321","coef":33.0,"desc":"Base Acqua Combi 330x330 (321)"},"316":{"molde":"316","coef":33.0,"desc":"Base Acqua Combi 330x506 (316)"},"323":{"molde":"323","coef":50.0,"desc":"Carca.Acq.Com.330x506(323) ciega"},"593":{"molde":"593","coef":33.0,"desc":"Carcasa 3956 Desjoyaux"},"607":{"molde":"607","coef":33.0,"desc":"Carcasa 3959"},"652":{"molde":"652","coef":33.0,"desc":"Carcasa 3975"},"338":{"molde":"338","coef":33.0,"desc":"Carcasa ABS 3942 FME (338)"},"429":{"molde":"429","coef":33.0,"desc":"Base 3074"},"347":{"molde":"347","coef":33.0,"desc":"Base 3223"},"366":{"molde":"366","coef":33.0,"desc":"Base 3344 4+44 VITA06(366)"},"778":{"molde":"778","coef":33.0,"desc":"Base ICT"},"317/B":{"molde":"317/B","coef":50.0,"desc":"Carc.Acq.13+6 PCE-BJC(317)"},"317/C":{"molde":"317/C","coef":50.0,"desc":"Carc.Acq.Com.13e+3int(317)"},"314/C":{"molde":"314/C","coef":50.0,"desc":"Carc.Acq.Com.8e+2 Intr 314"},"314/A":{"molde":"314/A","coef":50.0,"desc":"Carc.Acq.Com.8e+4mod(314)"},"452":{"molde":"452","coef":50.0,"desc":"Carc.Acq.Comb32+4ROSI"},"314/B":{"molde":"314/B","coef":50.0,"desc":"Carca.Acq.Com.8eciega(314)"},"317/A":{"molde":"317/A","coef":50.0,"desc":"Carcasa.Acq.Comb.13e(317) ciega"},"374":{"molde":"374","coef":50.0,"desc":"Puer.3344 Fume Legrand(374)"},"451":{"molde":"451","coef":33.0,"desc":"Base 3977"},"740":{"molde":"740","coef":33.0,"desc":"Embellecedor front. recarga EV"},"613":{"molde":"613","coef":33.0,"desc":"Pantalla Luminaria Eco-Led"},"769":{"molde":"769","coef":33.0,"desc":"Soporte canal usa 71504"},"770":{"molde":"770","coef":33.0,"desc":"Tapa mecanismos canal 71504"},"218":{"molde":"218","coef":33.0,"desc":"Tapa Opaca NUO 36 el.(218)"},"209":{"molde":"209","coef":33.0,"desc":"Tapa Opaca NUO.24 el.(209)"},"31":{"molde":"31","coef":33.0,"desc":"Base 3413 BN NUOVA (31)"},"214":{"molde":"214","coef":33.0,"desc":"Base 3624 Sup.NUO.24e(214)"},"547":{"molde":"547","coef":33.0,"desc":"Base Sup.18e NUOVA (547)"},"66":{"molde":"66","coef":33.0,"desc":"Carcasa NUOVA 18 elem.(66)"},"254":{"molde":"254","coef":33.0,"desc":"Tapa 3314 BN 12 elem.(254)"},"369":{"molde":"369","coef":33.0,"desc":"Tapa 3320 VITA 2006 (369)"},"248":{"molde":"248","coef":33.0,"desc":"Tapa 3324 Blanco Niev(248)"},"256":{"molde":"256","coef":33.0,"desc":"Tapa 3338 PS 38 ele. (256)"},"220":{"molde":"220","coef":33.0,"desc":"Tapa Interm. 36 elem.(220)"},"211":{"molde":"211","coef":33.0,"desc":"Tapa Interme. 24 elem(211)"},"744":{"molde":"744","coef":50.0,"desc":"Base toma 43021 Blanca"},"689":{"molde":"689","coef":25.0,"desc":"Corredera Inf. Maneta Gde."},"687":{"molde":"687","coef":25.0,"desc":"Corredera Inf. Maneta Peq."},"767":{"molde":"767","coef":33.0,"desc":"Corredera inferior"},"766":{"molde":"766","coef":33.0,"desc":"Cuerpo maneta"},"688":{"molde":"688","coef":25.0,"desc":"Cuerpo Maneta Gde."},"686":{"molde":"686","coef":25.0,"desc":"Cuerpo Maneta Peq."},"691":{"molde":"691","coef":25.0,"desc":"Muelle nuova derecho"},"684":{"molde":"684","coef":25.0,"desc":"Regleta 12 módulos acqua"},"683":{"molde":"683","coef":25.0,"desc":"Soporte Fijación Bases 50x50"},"276":{"molde":"276","coef":50.0,"desc":"Tornillo precintable Acqua"},"312":{"molde":"312","coef":50.0,"desc":"Tornillos Acqua Combi (312)"},"660":{"molde":"660","coef":50.0,"desc":"Aro universal 2018"},"176":{"molde":"176","coef":33.0,"desc":"Base 3075"},"656":{"molde":"656","coef":33.0,"desc":"BASE 3261 NARANJA"},"26":{"molde":"26","coef":33.0,"desc":"Base 3303 Gris Nuova 18 elem. (26)"},"247":{"molde":"247","coef":33.0,"desc":"Base 3308 PS 8 elem.(247)"},"249":{"molde":"249","coef":33.0,"desc":"Base 3312 Legrand (249)"},"288":{"molde":"288","coef":33.0,"desc":"Base 3320 Legrand (288)"},"252/B":{"molde":"252/B","coef":33.0,"desc":"Base 3324 Legrand (252)"},"252/A":{"molde":"252/A","coef":33.0,"desc":"Base 3324 PS 24 ele.(252)"},"252/C":{"molde":"252/C","coef":33.0,"desc":"Base 3338 PS 38 ele.(252)"},"213":{"molde":"213","coef":33.0,"desc":"Base 3524 Emp.NUO 24e(213)"},"221":{"molde":"221","coef":33.0,"desc":"Base 3536 Emp.NUO 36e(221)"},"293":{"molde":"293","coef":33.0,"desc":"Base 3908 ABS Famatel(293)"},"273":{"molde":"273","coef":33.0,"desc":"Base 3912 ABS Famatel(273)"},"650":{"molde":"650","coef":33.0,"desc":"Base 3927/28"},"377":{"molde":"377","coef":33.0,"desc":"Base 3950 495x125x107 (377)"},"379":{"molde":"379","coef":33.0,"desc":"Base 3957 (379)"},"383":{"molde":"383","coef":33.0,"desc":"Base 3958"},"319":{"molde":"319","coef":33.0,"desc":"Base Acqua Combi 180x330 (319)"},"322/B":{"molde":"322/B","coef":33.0,"desc":"Carc.Acq.Co.6m330x330(322)"},"322/A":{"molde":"322/A","coef":50.0,"desc":"Carc.Acq.Co.cie330x330(322) ciega"},"324":{"molde":"324","coef":33.0,"desc":"Carc.Acq.Com.230x506(324) ciega"},"318/B":{"molde":"318/B","coef":33.0,"desc":"Carc.Acq.Combi180x330(318)"},"318/A":{"molde":"318/A","coef":50.0,"desc":"Carca.Acq.Com.180x330(318) Ciega"},"651":{"molde":"651","coef":33.0,"desc":"Carcasa 3927"},"375/2":{"molde":"375/2","coef":33.0,"desc":"Carcasa 3950 495x125x107"},"378":{"molde":"378","coef":33.0,"desc":"Carcasa 3957"},"382":{"molde":"382","coef":33.0,"desc":"Carcasa 3958"},"375":{"molde":"375","coef":33.0,"desc":"Carcasa 3960 495x125x107"},"292":{"molde":"292","coef":33.0,"desc":"Carcasa ABS 3908 FME (292)"},"336":{"molde":"336","coef":33.0,"desc":"Carcasa ABS 3926 FME (336)"},"320":{"molde":"320","coef":33.0,"desc":"Carcasa Acq.Combi 6e.(320)"},"733":{"molde":"733","coef":33.0,"desc":"Cuerpo caja suspension"},"659":{"molde":"659","coef":33.0,"desc":"Placa Universal 2018"},"291":{"molde":"291","coef":75.0,"desc":"Puerta ABS 3908 FME (291)"},"275":{"molde":"275","coef":75.0,"desc":"Puerta ABS 3912 FME (275)"},"428":{"molde":"428","coef":33.0,"desc":"Tapa 3014 ABS Gris 7035"},"671":{"molde":"671","coef":15.0,"desc":"Tapa 3025 (Ø 60)"},"673":{"molde":"673","coef":15.0,"desc":"Tapa 3026 (65x65)"},"675":{"molde":"675","coef":15.0,"desc":"Tapa 3027 (Ø 70)"},"781":{"molde":"781","coef":25.0,"desc":"Distanciales ICT"},"453":{"molde":"453","coef":75.0,"desc":"Puer.Trans.Acq.Com16e(453)"},"608":{"molde":"608","coef":75.0,"desc":"Puerta 3959"},"672":{"molde":"672","coef":15.0,"desc":"Base 3025 (Ø 60)"},"674":{"molde":"674","coef":15.0,"desc":"Base 3026 (65x65)"},"676":{"molde":"676","coef":15.0,"desc":"Base 3027 (Ø 70)"},"829":{"molde":"829","coef":33.0,"desc":"Tapa Caja Empotrar 300x150x60"},"763":{"molde":"763","coef":33.0,"desc":"Base 3918"},"764":{"molde":"764","coef":33.0,"desc":"Carcasa 3918"},"325":{"molde":"325","coef":75.0,"desc":"Puerta ABS 3926 FME (325)"},"716":{"molde":"716","coef":75.0,"desc":"Puerta 3912 merz"},"765":{"molde":"765","coef":75.0,"desc":"Puerta 3918 ABS"},"339":{"molde":"339","coef":75.0,"desc":"Puerta ABS 3942 FME(339)"},"380":{"molde":"380","coef":75.0,"desc":"Puer.Trans.3957"},"315":{"molde":"315","coef":75.0,"desc":"Puer.Trans.Acq.Com.8e(315)"},"348":{"molde":"348","coef":33.0,"desc":"Separador 3220"},"734":{"molde":"734","coef":25.0,"desc":"Soporte regleta caja suspension"},"742":{"molde":"742","coef":33.0,"desc":"Bisagra 1-1 recarga EV"},"741":{"molde":"741","coef":33.0,"desc":"Bisagra 1-2 recarga EV"},"307":{"molde":"307","coef":25.0,"desc":"Bisagra union Acqua Combi IP-65 (307)"},"223":{"molde":"223","coef":25.0,"desc":"Portaguias 36 elem.(223)"},"271":{"molde":"271","coef":75.0,"desc":"Puerta ABS 3904 FME (271)"},"449":{"molde":"449","coef":33.0,"desc":"Puerta ABS 3902 FME"},"376":{"molde":"376","coef":75.0,"desc":"Puerta PC 3950/60 (376)"},"699":{"molde":"699","coef":33.0,"desc":"Base caja 3251"},"304":{"molde":"304","coef":33.0,"desc":"Puerta 3320 (304)"},"259":{"molde":"259","coef":33.0,"desc":"Puerta 3324/3338 (259)"},"287":{"molde":"287","coef":33.0,"desc":"Tapa 3320 PS 22 elem.(287)"},"847":{"molde":"847","coef":25.0,"desc":"Separador nuevo 1+1 ASTRA"},"866":{"molde":"866","coef":33.0,"desc":"Base Empotrar 42 ASTRA"},"846":{"molde":"846","coef":33.0,"desc":"Base Empotrar 54 ASTRA"},"843":{"molde":"843","coef":33.0,"desc":"Base Empotrar 28 ASTRA"},"840":{"molde":"840","coef":33.0,"desc":"Base Empotrar 18 ASTRA"},"838":{"molde":"838","coef":33.0,"desc":"Puerta distribucion 18 M"},"841":{"molde":"841","coef":33.0,"desc":"Puerta distribucion 28 M"},"844":{"molde":"844","coef":33.0,"desc":"Puerta distribucion 54 M"},"839":{"molde":"839","coef":33.0,"desc":"Marco distribucion 18 M"},"842":{"molde":"842","coef":33.0,"desc":"Marco distribucion 28 M"},"845":{"molde":"845","coef":33.0,"desc":"Marco distribucion 54 M"},"867":{"molde":"867","coef":33.0,"desc":"Marco distribucion 42-RE"},"169":{"molde":"169","coef":25.0,"desc":"TORNILLO PVC RIGIDO 3015"},"806":{"molde":"806","coef":25.0,"desc":"Aldaba Brida Pladur ASTRA"},"805":{"molde":"805","coef":25.0,"desc":"Soporte Brida Pladur ASTRA"}}};
+
+const OPERARIOS = ['Manu','Xavi','Pili','Isa','Eva','Memba','Filly','Juan','Mohssin','Aneel','Moustapha','Kissima','ElHadji'];
+const MACHINES  = ['E01','E02','E03','I01','I02','I03','I04','I05','I06','I07','I08','I09','I10','I11','I12'];
+const OP_COLORS = ['#3b82f6','#6366f1','#22c55e','#f59e0b','#ef4444','#ec4899','#14b8a6','#f97316','#8b5cf6','#06b6d4','#84cc16','#d946ef','#fb923c'];
+
+let state = {};
+
+function machCat(m) { if(m==='E01'||m==='E02'||m==='E03') return m; return 'I'; }
+
+function getMoldeData(machId, molde) {
+  if (!molde) return null;
+  return (MOLDE_BY_CAT[machCat(machId)] || MOLDE_BY_CAT['I'])[molde] || null;
+}
+
+function buildOptions(cat) {
+  const dict = MOLDE_BY_CAT[cat] || MOLDE_BY_CAT['I'];
+  const keys = Object.keys(dict).sort((a,b)=>{ const na=parseFloat(a),nb=parseFloat(b); return(!isNaN(na)&&!isNaN(nb))?na-nb:a.localeCompare(b); });
+  return '<option value="">— Sin molde —</option>'+keys.map(k=>`<option value="${k}">${k} · ${dict[k].desc.substring(0,32)}</option>`).join('');
+}
+
+const OPT = { E01:buildOptions('E01'), E02:buildOptions('E02'), E03:buildOptions('E03'), I:buildOptions('I') };
+const OP_OPT = '<option value="">— Sin asignar —</option>'+OPERARIOS.map(o=>`<option value="${o}">${o}</option>`).join('');
+
+function loadState() { try { const s=localStorage.getItem('maq_v2'); if(s) state=JSON.parse(s); } catch(e){} }
+function saveState() { try { localStorage.setItem('maq_v2',JSON.stringify(state)); flashAutosave(); } catch(e){} }
+function resetAll() {
+  if(!confirm('¿Limpiar todas las asignaciones?')) return;
+  state={}; localStorage.removeItem('maq_v2');
+  renderTable(); updateAllOcu(); updateSummary();
+}
+
+let _afl;
+function flashAutosave() {
+  const el = document.getElementById('autosave-label');
+  if (!el) return;
+  el.style.color = 'var(--green)';
+  clearTimeout(_afl);
+  _afl = setTimeout(() => { el.style.color = ''; }, 1200);
+}
+
+function showToast(m) { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); }
+let _ct; function showConflict(m) { const el=document.getElementById('conflict-msg'); el.textContent=m; el.classList.add('show'); clearTimeout(_ct); _ct=setTimeout(()=>el.classList.remove('show'),3000); }
+
+function getOcc(op) {
+  let total=0; const machines=[];
+  for(const [m,s] of Object.entries(state)) {
+    if(s.operario===op && s.molde && !s.stopped) {
+      const d=getMoldeData(m,s.molde); const c=d?d.coef:0;
+      total+=c; machines.push({machId:m,molde:s.molde,coef:c});
+    }
+  }
+  return {total,machines};
+}
+function occColor(p) { if(p<=80) return 'ok'; if(p<=100) return 'warn'; if(p<=120) return 'over'; return 'crit'; }
+function applyOpColor(sel,op) { if(!op){sel.style.borderColor='';sel.style.color='';return;} const c=OP_COLORS[OPERARIOS.indexOf(op)]||'#3b82f6'; sel.style.borderColor=c; sel.style.color=c; }
+
+function ensureState(m) { if(!state[m]) state[m]={molde:'',operario:'',stopped:false}; }
+
+function renderTable() {
+  const tbody=document.getElementById('tbody'); tbody.innerHTML='';
+  for(const machId of MACHINES) {
+    const type=machId[0].toLowerCase(); const cat=machCat(machId);
+    const s=state[machId]||{molde:'',operario:'',stopped:false};
+    const tr=document.createElement('tr');
+    tr.className=`row-machine type-${type}${s.stopped?' stopped':''}`;
+    tr.id=`row-${machId}`;
+    tr.innerHTML=`
+      <td class="col-stop"><button class="stop-btn${s.stopped?' active':''}" title="Máquina parada" onclick="toggleStop('${machId}')">⏸</button></td>
+      <td class="col-id" style="padding:0 8px">
+        <div style="display:flex;flex-direction:column;align-items:center">
+          <span class="machine-badge badge-${type}">${machId}</span>
+          <span class="stopped-label">PARADA</span>
+        </div>
+      </td>
+      <td class="col-molde"><select class="molde-select" id="mol-${machId}">${OPT[cat]}</select></td>
+      <td class="col-desc" id="desc-${machId}"></td>
+      <td class="col-op"><select class="op-select" id="op-${machId}">${OP_OPT}</select></td>
+      <td class="col-ocu" id="ocu-${machId}"></td>`;
+    tbody.appendChild(tr);
+
+    const molSel=document.getElementById(`mol-${machId}`);
+    molSel.value=s.molde||'';
+    updateDesc(machId, s.molde||'');
+
+    const opSel=document.getElementById(`op-${machId}`);
+    opSel.value=s.operario||'';
+    applyOpColor(opSel, s.operario||'');
+
+    molSel.addEventListener('change', e=>onMoldeChange(machId,e.target.value));
+    opSel.addEventListener('change', e=>onOpChange(machId,e.target.value));
+  }
+}
+
+function onMoldeChange(machId, val) {
+  ensureState(machId);
+  if (val) {
+    for(const [m,s] of Object.entries(state)) {
+      if(m!==machId && s.molde===val && !s.stopped) {
+        showConflict(`⚠ El molde ${val} ya está asignado a ${m}`);
+        const sel=document.getElementById(`mol-${machId}`);
+        sel.value=state[machId].molde||'';
+        sel.classList.add('conflict');
+        setTimeout(()=>sel.classList.remove('conflict'),1500);
+        return;
+      }
+    }
+  }
+  state[machId].molde=val;
+  updateDesc(machId,val);
+  updateAllOcu(); updateSummary(); saveState();
+}
+
+function onOpChange(machId, val) {
+  ensureState(machId);
+  state[machId].operario=val;
+  applyOpColor(document.getElementById(`op-${machId}`),val);
+  updateAllOcu(); updateSummary(); saveState();
+}
+
+function toggleStop(machId) {
+  ensureState(machId);
+  state[machId].stopped=!state[machId].stopped;
+  const row=document.getElementById(`row-${machId}`);
+  const btn=row.querySelector('.stop-btn');
+  if(state[machId].stopped) { row.classList.add('stopped'); btn.classList.add('active'); }
+  else { row.classList.remove('stopped'); btn.classList.remove('active'); }
+  updateAllOcu(); updateSummary(); saveState();
+}
+
+function updateDesc(machId, val) {
+  const cell=document.getElementById(`desc-${machId}`); if(!cell) return;
+  if(!val) { cell.innerHTML='<span class="desc-text" style="color:#2e3248">—</span>'; return; }
+  const d=getMoldeData(machId,val);
+  if(!d) { cell.innerHTML=`<span class="desc-text" style="color:#555">${val}</span>`; return; }
+  cell.innerHTML=`<div class="desc-text">${d.desc}</div><div class="desc-coef">Coef. ${d.coef}%</div>`;
+}
+
+function updateOcuCell(machId) {
+  const cell=document.getElementById(`ocu-${machId}`); if(!cell) return;
+  const s=state[machId]||{};
+  if(!s.operario||!s.molde||s.stopped) { cell.innerHTML='<div class="ocu-display"><span class="ocu-pct" style="color:#2e3248">—</span></div>'; return; }
+  const {total}=getOcc(s.operario);
+  const cc=occColor(total); const idx=OPERARIOS.indexOf(s.operario); const color=OP_COLORS[idx]||'#3b82f6';
+  cell.innerHTML=`<div class="ocu-display"><span class="ocu-pct color-${cc}">${total.toFixed(0)}%</span><div class="ocu-bar-wrap"><div class="ocu-bar" style="width:${Math.min(total,200)/2}%;background:${color}"></div></div></div>`;
+}
+
+function updateAllOcu() { for(const m of MACHINES) updateOcuCell(m); }
+
+function updateSummary() {
+  const bar=document.getElementById('summary-bar'); bar.innerHTML='';
+  for(const op of OPERARIOS) {
+    const {total,machines}=getOcc(op); if(!machines.length) continue;
+    const idx=OPERARIOS.indexOf(op); const color=OP_COLORS[idx]; const cc=occColor(total);
+    const chip=document.createElement('div'); chip.className='op-chip';
+    chip.innerHTML=`<div class="op-chip-dot" style="background:${color}"></div><span class="op-chip-name">${op}</span><span class="op-chip-pct color-${cc}">${total.toFixed(0)}%</span>`;
+    bar.appendChild(chip);
+  }
+  renderPanel();
+}
+
+function renderPanel() {
+  const c=document.getElementById('panel-content'); c.innerHTML='';
+  const stopped=MACHINES.filter(m=>state[m]?.stopped);
+  if(stopped.length) {
+    c.innerHTML+=`<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:10px 14px;margin-bottom:14px"><div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;color:#ef4444;letter-spacing:1px;margin-bottom:6px">⏸ MÁQUINAS PARADAS</div><div style="font-size:13px">${stopped.join('  ·  ')}</div></div>`;
+  }
+  let any=false;
+  for(const op of OPERARIOS) {
+    const {total,machines}=getOcc(op); if(!machines.length) continue; any=true;
+    const idx=OPERARIOS.indexOf(op); const color=OP_COLORS[idx]; const cc=occColor(total);
+    c.innerHTML+=`<div class="op-card" style="border-color:${color}33">
+      <div class="op-card-header"><span class="op-card-name" style="color:${color}">${op}</span><span class="op-card-total color-${cc}">${total.toFixed(0)}%</span></div>
+      <div class="op-progress-wrap"><div class="op-progress" style="width:${Math.min(total,200)/2}%;background:${color}"></div></div>
+      <div class="op-machines">${machines.map(m=>`<div class="op-machine-item"><span>${m.machId}</span><span>${m.molde} · ${m.coef}%</span></div>`).join('')}</div>
+    </div>`;
+  }
+  if(!any&&!stopped.length) c.innerHTML='<p style="color:var(--text-dim);font-size:14px;text-align:center;padding:30px 0">Sin asignaciones aún</p>';
+}
+
+function togglePanel() { document.getElementById('op-panel').classList.toggle('open'); document.getElementById('overlay').classList.toggle('show'); renderPanel(); }
+function closePanel()  { document.getElementById('op-panel').classList.remove('open'); document.getElementById('overlay').classList.remove('show'); }
+
+document.getElementById('header-date').textContent = new Date().toLocaleDateString('es-ES',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+loadState(); renderTable(); updateAllOcu(); updateSummary();
+</script>
+</body>
+</html>
